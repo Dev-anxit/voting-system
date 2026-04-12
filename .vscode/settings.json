@@ -1,0 +1,10 @@
+{
+    "C_Cpp.files.exclude": {
+        "**/.vscode": true,
+        "**/.vs": true,
+        "moc_*.cpp": true,
+        "ui_*.h": true,
+        "qrc_*.cpp": true
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}
