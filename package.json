@@ -1,0 +1,8 @@
+{
+  "name": "voting-system-root",
+  "version": "1.0.0",
+  "description": "Monolithic runner for e-Voting System",
+  "scripts": {
+    "dev": "npx concurrently \"python3 -m http.server 4455\" \"npm start --prefix backend\""
+  }
+}
