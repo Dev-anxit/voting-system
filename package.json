@@ -4,7 +4,8 @@
   "description": "Secure MongoDB e-Voting System",
   "scripts": {
     "start": "node api/index.js",
-    "dev": "npx concurrently \"python3 -m http.server 4455\" \"node api/index.js\""
+    "dev": "npx concurrently \"python3 -m http.server 4455\" \"node api/index.js\"",
+    "build": "echo 'Build skipped: Static assets are in the root directory'"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
