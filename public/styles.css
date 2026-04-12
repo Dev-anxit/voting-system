@@ -21,7 +21,7 @@
 }
 
 body {
-    background-image: url('public/assets/voting_bg.png');
+    background-image: url('assets/voting_bg.png');
     background-size: cover;
     background-position: center right;
     background-repeat: no-repeat;
