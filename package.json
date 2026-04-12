@@ -1,10 +1,26 @@
 {
   "name": "voting-system-root",
   "version": "1.0.0",
-  "description": "Monolithic runner for e-Voting System",
+  "description": "Secure MongoDB e-Voting System",
   "scripts": {
-    "install": "cd backend && npm install",
-    "start": "node backend/server.js",
-    "dev": "npx concurrently \"python3 -m http.server 4455\" \"npm start --prefix backend\""
+    "start": "node api/index.js",
+    "dev": "npx concurrently \"python3 -m http.server 4455\" \"node api/index.js\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.1.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb-memory-server": "^9.1.6",
+    "mongoose": "^7.0.0",
+    "morgan": "^1.10.1",
+    "twilio": "^4.19.0",
+    "xss-clean": "^0.1.4"
   }
 }
