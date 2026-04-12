@@ -11,8 +11,20 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const crypto = require('crypto');
 const path = require('path');
+
+// Rate Limiting
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // limit each IP to 50 requests per windowMs
+    message: { error: 'Too many authentication attempts. Please try again later.' }
+});
+
+const voteLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // limit each IP to 10 votes per hour
+    message: { error: 'Voting limit exceeded. Only 10 votes per hour allowed from this connection.' }
+});
 
 const app = express();
 
@@ -34,12 +46,32 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.disable('x-powered-by'); // Security: Don't reveal server type
+
+const allowedOrigins = [
+    'http://localhost:4455',
+    'http://localhost:3000',
+    'http://127.0.0.1:4455',
+    /\.vercel\.app$/ // Allow Vercel deployments
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.some(ao => typeof ao === 'string' ? ao === origin : ao.test(origin))) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Policy Blocked: Unauthorized Origin'));
+        }
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
+
+app.use(express.json({ limit: '1mb' })); // Reduced limit for safety
 app.use(mongoSanitize());
 app.use(xssClean());
 app.use(hpp());
-app.use(morgan('dev'));
+app.use(morgan('combined')); // More detailed logs for security monitoring
 
 // Serve Static Frontend
 const publicPath = path.join(__dirname, '../public');
@@ -85,6 +117,10 @@ const api = express.Router();
 const SECRET = process.env.JWT_SECRET_KEY || 'national_voting_secret_2026';
 
 api.get('/stats', async (req, res) => {
+    const adminSecret = process.env.ADMIN_SECRET_KEY || '68c7c9c0-681b-4d40-84c8-358055a40b8a';
+    if (req.headers['x-admin-key'] !== adminSecret) {
+        return res.status(403).json({ error: 'Access Denied: Admin authentication required to view election stats.' });
+    }
     try {
         if (isSimulated) {
             const counts = { bjp: 0, inc: 0, aap: 0, nota: 0 };
@@ -95,20 +131,24 @@ api.get('/stats', async (req, res) => {
         const results = { bjp: 0, inc: 0, aap: 0, nota: 0 };
         stats.forEach(s => { results[s._id] = s.count; });
         res.json(results);
-    } catch (e) { res.json({ bjp: 0, inc: 0, aap: 0, nota: 0 }); }
+    } catch (e) { 
+        res.status(500).json({ error: 'Failed to retrieve stats' }); 
+    }
 });
 
-api.post('/send-otp', async (req, res) => {
+api.post('/send-otp', authLimiter, async (req, res) => {
     const { mobile } = req.body;
     const rawOTP = "123456"; 
     const hashedOTP = await bcrypt.hash(rawOTP, 10);
     if (isSimulated) {
         db.otps = db.otps.filter(o => o.mobile !== mobile);
         db.otps.push({ mobile, otpHash: hashedOTP, expiresAt: Date.now() + 300000 });
+        console.log(`[AUTH] Simulated OTP for ${mobile}: ${rawOTP}`);
     } else {
         await OTP.findOneAndUpdate({ mobile }, { otpHash: hashedOTP, expiresAt: Date.now() + 300000 }, { upsert: true });
     }
-    res.json({ success: true, message: 'OTP sent (Simulated)', simulatedOtp: rawOTP });
+    // SECURE: Do not return the OTP in the JSON response
+    res.json({ success: true, message: 'OTP sent successfully' });
 });
 
 api.post('/verify-otp', async (req, res) => {
@@ -123,18 +163,24 @@ api.post('/verify-otp', async (req, res) => {
 
 api.post('/validate-documents', async (req, res) => {
     const { aadhaar, pan, voterId } = req.body;
-    const aHash = crypto.createHash('sha256').update(aadhaar).digest('hex');
+    
+    // SECURE: Added salting to hashing to prevent rainbow table attacks/de-anonymization
+    const salt = process.env.HASH_SALT || 'development_fallback_salt_2026';
+    const aHash = crypto.createHash('sha256').update(aadhaar + salt).digest('hex');
+    
     const exists = isSimulated ? db.voters.find(v => v.aadhaarHash === aHash) : await Voter.findOne({ aadhaarHash: aHash });
-    if (exists) return res.status(403).json({ error: 'Document already voted.' });
+    if (exists) return res.status(403).json({ error: 'This identity has already cast a vote.' });
     const kycOtp = "123456";
     const kycRef = `kyc_${aHash.substring(0,10)}`;
     const hashed = await bcrypt.hash(kycOtp, 10);
     if (isSimulated) {
         db.otps.push({ mobile: kycRef, otpHash: hashed, kycData: { aadhaarHash: aHash, voter: voterId } });
+        console.log(`[KYC] Simulated OTP for ${kycRef}: ${kycOtp}`);
     } else {
         await OTP.findOneAndUpdate({ mobile: kycRef }, { otpHash: hashed, kycData: { aadhaarHash: aHash, voter: voterId } }, { upsert: true });
     }
-    res.json({ success: true, kycRef, simulatedKycOtp: kycOtp, maskedMobile: '******'+aadhaar.slice(-4), maskedEmail: voterId+'@gov.in' });
+    // SECURE: Do not return simulated OTP in response
+    res.json({ success: true, kycRef, maskedMobile: '******'+aadhaar.slice(-4), maskedEmail: voterId+'@gov.in' });
 });
 
 api.post('/verify-kyc-otp', async (req, res) => {
@@ -147,7 +193,7 @@ api.post('/verify-kyc-otp', async (req, res) => {
     res.json({ success: true, kycToken: token });
 });
 
-api.post('/vote', async (req, res) => {
+api.post('/vote', voteLimiter, async (req, res) => {
     try {
         const { candidateId, selfieData } = req.body;
         const auth = req.headers.authorization;
@@ -168,9 +214,14 @@ api.post('/vote', async (req, res) => {
 });
 
 api.post('/wipe', async (req, res) => {
-    if (req.headers['x-admin-key'] !== (process.env.ADMIN_SECRET_KEY || 'admin')) return res.status(403).json({ error: 'No' });
+    const adminSecret = process.env.ADMIN_SECRET_KEY || '68c7c9c0-681b-4d40-84c8-358055a40b8a'; // Secure default
+    if (req.headers['x-admin-key'] !== adminSecret) {
+        console.warn(`[SECURITY] Unauthorized wipe attempt from IP: ${req.ip}`);
+        return res.status(403).json({ error: 'Administrative access required.' });
+    }
     if (isSimulated) { db = { votes: [], voters: [], otps: [], audit: [] }; }
     else { await Vote.deleteMany({}); await Voter.deleteMany({}); }
+    console.log(`[ADMIN] Database wiped by administrative action.`);
     res.json({ success: true });
 });
 

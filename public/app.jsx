@@ -61,22 +61,30 @@ function App() {
 
     const [votes, setVotes] = useState({ bjp: 0, inc: 0, aap: 0, nota: 0 });
 
-    const fetchStats = async () => {
+    const fetchStats = async (adminKey) => {
+        if (!adminKey) return;
         try {
-            const res = await fetch(`${API_BASE}/stats`);
+            const res = await fetch(`${API_BASE}/stats`, {
+                headers: { 'x-admin-key': adminKey }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setVotes(prev => ({...prev, ...data}));
+                return true;
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Unauthorized', 'error');
+                return false;
             }
         } catch (err) {
-            console.error('Failed to fetch stats');
+            showToast('Failed to connect to stats server.', 'error');
+            return false;
         }
     };
 
+    // Removed automatic stats polling for privacy
     useEffect(() => {
-        fetchStats();
-        const interval = setInterval(fetchStats, 5000);
-        return () => clearInterval(interval);
+        // Stats are only fetched when admin logs in
     }, []);
 
     const showToast = (message, type = 'success') => {
@@ -111,23 +119,8 @@ function App() {
 
             if (res.ok && data.success) {
                 setView('login_otp');
-                
-                if (data.smsSent) {
-                    // Real SMS was sent successfully via Twilio
-                    showToast(`✅ OTP sent via SMS to +91******${mobile.slice(-4)}. Check your phone!`, 'success');
-                } else if (data.smsFailed) {
-                    // Twilio tried but failed (trial account / unverified number)
-                    showToast('⚠️ SMS delivery failed (Twilio trial). Using fallback OTP.', 'error');
-                    setTimeout(() => {
-                        alert(`⚠️ TWILIO TRIAL ACCOUNT LIMITATION\n\n${data.smsError}\n\nYour OTP is: ${data.simulatedOtp}\n\n📌 To receive REAL SMS:\n1. Go to console.twilio.com\n2. Verify your number (+91${mobile})\n3. Or upgrade to a paid Twilio account`);
-                    }, 500);
-                } else if (data.simulatedOtp) {
-                    // No Twilio configured at all — pure simulation
-                    showToast('OTP generated (simulation mode).', 'success');
-                    setTimeout(() => {
-                        alert(`🔔 SIMULATED SMS:\n\n[National e-Voting]\nYour OTP is: ${data.simulatedOtp}\n\n(Configure Twilio in backend/.env for real SMS)`);
-                    }, 800);
-                }
+                showToast(`OTP sent successfully!`, 'success');
+                console.log("Check server logs for the simulated OTP if testing locally.");
             } else {
                 showToast(data.error || 'Failed to send OTP', 'error');
             }
@@ -207,13 +200,7 @@ function App() {
                 setMaskedMobile(data.maskedMobile);
                 setMaskedEmail(data.maskedEmail);
                 setView('kyc_otp');
-
-                // Show simulated KYC OTP
-                if (data.simulatedKycOtp) {
-                    setTimeout(() => {
-                        alert(`🏛️ GOVERNMENT KYC VERIFICATION:\n\nOTP sent to:\n📱 Mobile: ${data.maskedMobile}\n📧 Email: ${data.maskedEmail}\n\nYour OTP is: ${data.simulatedKycOtp}\n\n(In production, this reaches the mobile/email registered with UIDAI)`);
-                    }, 800);
-                }
+                console.log("KYC OTP generated. Check server logs.");
             } else {
                 showToast(data.error || 'Document validation failed', 'error');
             }
@@ -342,8 +329,7 @@ function App() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                showToast(`Vote recorded for ${candidateName}!`, 'success');
-                fetchStats();
+                showToast(`Vote recorded securely!`, 'success');
                 setView('success');
             } else {
                 showToast(data.error || 'Vote rejected by server.', 'error');
@@ -373,11 +359,15 @@ function App() {
         setKycToken(null);
         setUserInputCaptcha('');
         generateCaptcha();
+        localStorage.removeItem('admin_key');
     }
 
     const handleWipeDatabase = async () => {
         if (confirm('⚠️ WARNING: This will permanently erase ALL votes and voter records. Continue?')) {
-            const adminKey = prompt('Enter Admin Secret Key to authorize this action:');
+            let adminKey = localStorage.getItem('admin_key');
+            if (!adminKey) {
+                adminKey = prompt('Enter Admin Secret Key to authorize this action:');
+            }
             if (!adminKey) return;
             try {
                 const res = await fetch(`${API_BASE}/wipe`, { 
@@ -473,8 +463,17 @@ function App() {
                             {isLoading ? <><i className="fas fa-spinner fa-spin"></i> Processing...</> : <><i className="fas fa-fingerprint"></i> Generate Security OTP</>}
                         </button>
                     </form>
-                    <button onClick={() => {setView('results'); fetchStats();}} className="btn btn-secondary" style={{marginTop: '1rem'}}>
-                        <i className="fas fa-chart-line"></i> View Election Results
+                    <button onClick={async () => {
+                        const key = prompt('Enter Administrative Secret Key to view results:');
+                        if (key) {
+                            const success = await fetchStats(key);
+                            if (success) {
+                                localStorage.setItem('admin_key', key);
+                                setView('results');
+                            }
+                        }
+                    }} className="btn btn-secondary" style={{marginTop: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)'}}>
+                        <i className="fas fa-lock"></i> Admin Dashboard
                     </button>
                 </div>
             )}
@@ -731,7 +730,7 @@ function App() {
             {/* ==================== VIEW: RESULTS ==================== */}
             {view === 'results' && (
                 <div className="fade-in results-section">
-                    <h2 className="section-heading"><i className="fas fa-poll"></i> Nationwide Election Results</h2>
+                    <h2 className="section-heading"><i className="fas fa-shield-alt"></i> Administrative Results Portal</h2>
                     <div className="results-container">
                         {(() => {
                             const totalVotes = Object.values(votes).reduce((a, b) => a + b, 0);
