@@ -474,11 +474,12 @@ function lookupGovernmentRecords(aadhaar, pan, voterId) {
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: 'Failed to wipe DB' });
-        }
-    });
-
-    const PORT = process.env.PORT || 4000;
-    app.listen(PORT, () => {
-        console.log(`Backend server successfully shielded and active on port ${PORT}`);
-    });
+    if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+        const PORT = process.env.PORT || 4000;
+        app.listen(PORT, () => {
+            console.log(`Backend server successfully shielded and active on port ${PORT}`);
+        });
+    }
 })();
+
+module.exports = app;
