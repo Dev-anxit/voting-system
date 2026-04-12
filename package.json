@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Monolithic runner for e-Voting System",
   "scripts": {
+    "install": "cd backend && npm install",
+    "start": "node backend/server.js",
     "dev": "npx concurrently \"python3 -m http.server 4455\" \"npm start --prefix backend\""
   }
 }

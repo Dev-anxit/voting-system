@@ -7,7 +7,9 @@ const candidates = [
     { id: 'nota', name: 'None of the Above (NOTA)', shortName: 'NOTA', image: 'https://upload.wikimedia.org/wikipedia/commons/f/f6/NOTA_Option_Logo.svg', color: '#9CA3AF' }
 ];
 
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:4000/api' 
+    : '/api';
 
 // Views: login → login_otp → verification → kyc_otp → selfie → voting → success → results
 

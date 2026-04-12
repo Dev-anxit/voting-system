@@ -8,10 +8,14 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const twilio = require('twilio');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Increased limit for selfie image data
+
+// Serve static frontend files for unified full-stack deployment
+app.use(express.static(path.join(__dirname, '../')));
 
 // ==========================================
 // SECURITY: Rate Limiting to prevent Brute Force & DDoS
@@ -473,8 +477,8 @@ function lookupGovernmentRecords(aadhaar, pan, voterId) {
         }
     });
 
-    const PORT = 4000;
+    const PORT = process.env.PORT || 4000;
     app.listen(PORT, () => {
-        console.log(`Backend server successfully shielded and active on http://localhost:${PORT}`);
+        console.log(`Backend server successfully shielded and active on port ${PORT}`);
     });
 })();
