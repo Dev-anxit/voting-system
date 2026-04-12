@@ -377,11 +377,19 @@ function App() {
 
     const handleWipeDatabase = async () => {
         if (confirm('⚠️ WARNING: This will permanently erase ALL votes and voter records. Continue?')) {
+            const adminKey = prompt('Enter Admin Secret Key to authorize this action:');
+            if (!adminKey) return;
             try {
-                const res = await fetch(`${API_BASE}/wipe`, { method: 'POST' });
+                const res = await fetch(`${API_BASE}/wipe`, { 
+                    method: 'POST',
+                    headers: { 'x-admin-key': adminKey }
+                });
                 if (res.ok) {
                     showToast('Database wiped clean.', 'success');
                     setVotes({bjp:0, inc:0, aap:0, nota:0});
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Admin authorization failed.', 'error');
                 }
             } catch (err) {
                 showToast('Could not reach backend.', 'error');

@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>National e-Voting Portal - Secure Digilocker Auth</title>
-    <meta name="description" content="A powerful and attractive voting system featuring React, Digilocker Auth, and official party logos.">
+    <title>National e-Voting Portal — Secured by DigiLocker & Biometric Auth</title>
+    <meta name="description" content="India's National e-Voting Portal. Secure multi-factor authentication with Aadhaar, PAN, Voter ID, and live biometric verification.">
+    <meta name="robots" content="noindex, nofollow"> <!-- Prevent public indexing of a voting portal -->
+    <!-- Security: Prevent Referrer Leakage -->
+    <meta name="referrer" content="no-referrer">
+    <!-- Security: Prevent MIME Sniffing -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <!-- Security: Deny framing (Clickjacking Protection) -->
+    <meta http-equiv="X-Frame-Options" content="DENY">
+
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- React & ReactDOM (UMD via CDN) -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    <!-- React & ReactDOM (UMD via CDN) — Use production builds -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <!-- Babel for in-browser JSX support -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
