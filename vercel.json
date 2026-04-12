@@ -2,10 +2,12 @@
   "version": 2,
   "builds": [
     { "src": "backend/server.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "app.jsx", "use": "@vercel/static" },
+    { "src": "styles.css", "use": "@vercel/static" },
+    { "src": "public/**/*", "use": "@vercel/static" }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/backend/server.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/backend/server.js" }
   ]
 }
