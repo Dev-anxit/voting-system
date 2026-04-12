@@ -63,7 +63,7 @@ const connectDB = async () => {
 };
 
 app.use(async (req, res, next) => {
-    await connectDB();
+    try { await connectDB(); } catch(e) { isSimulated = true; }
     next();
 });
 
@@ -79,24 +79,26 @@ const Voter = mongoose.models.Voter || mongoose.model('Voter', VoterSchema);
 const OTP = mongoose.models.OTP || mongoose.model('OTP', OTPSchema);
 
 // ==========================================
-// API ROUTES (Using Router for Flexible Prefixes)
+// API ROUTES
 // ==========================================
-const apiRouter = express.Router();
+const api = express.Router();
 const SECRET = process.env.JWT_SECRET_KEY || 'national_voting_secret_2026';
 
-apiRouter.get('/stats', async (req, res) => {
-    if (isSimulated) {
-        const counts = { bjp: 0, inc: 0, aap: 0, nota: 0 };
-        db.votes.forEach(v => { if(counts[v.candidateId] !== undefined) counts[v.candidateId]++; });
-        return res.json(counts);
-    }
-    const stats = await Vote.aggregate([{ $group: { _id: "$candidateId", count: { $sum: 1 } } }]);
-    const results = { bjp: 0, inc: 0, aap: 0, nota: 0 };
-    stats.forEach(s => { results[s._id] = s.count; });
-    res.json(results);
+api.get('/stats', async (req, res) => {
+    try {
+        if (isSimulated) {
+            const counts = { bjp: 0, inc: 0, aap: 0, nota: 0 };
+            db.votes.forEach(v => { if(counts[v.candidateId] !== undefined) counts[v.candidateId]++; });
+            return res.json(counts);
+        }
+        const stats = await Vote.aggregate([{ $group: { _id: "$candidateId", count: { $sum: 1 } } }]);
+        const results = { bjp: 0, inc: 0, aap: 0, nota: 0 };
+        stats.forEach(s => { results[s._id] = s.count; });
+        res.json(results);
+    } catch (e) { res.json({ bjp: 0, inc: 0, aap: 0, nota: 0 }); }
 });
 
-apiRouter.post('/send-otp', async (req, res) => {
+api.post('/send-otp', async (req, res) => {
     const { mobile } = req.body;
     const rawOTP = "123456"; 
     const hashedOTP = await bcrypt.hash(rawOTP, 10);
@@ -109,17 +111,17 @@ apiRouter.post('/send-otp', async (req, res) => {
     res.json({ success: true, message: 'OTP sent (Simulated)', simulatedOtp: rawOTP });
 });
 
-apiRouter.post('/verify-otp', async (req, res) => {
+api.post('/verify-otp', async (req, res) => {
     const { mobile, otp } = req.body;
     let record = isSimulated ? db.otps.find(o => o.mobile === mobile) : await OTP.findOne({ mobile });
     if (!record) return res.status(400).json({ error: 'Retry OTP sequence.' });
     const valid = await bcrypt.compare(otp, record.otpHash);
     if (!valid) return res.status(401).json({ error: 'Wrong OTP.' });
-    const token = jwt.sign({ mobileTheme: mobile }, SECRET, { expiresIn: '20m' });
+    const token = jwt.sign({ mobile }, SECRET, { expiresIn: '20m' });
     res.json({ success: true, token });
 });
 
-apiRouter.post('/validate-documents', async (req, res) => {
+api.post('/validate-documents', async (req, res) => {
     const { aadhaar, pan, voterId } = req.body;
     const aHash = crypto.createHash('sha256').update(aadhaar).digest('hex');
     const exists = isSimulated ? db.voters.find(v => v.aadhaarHash === aHash) : await Voter.findOne({ aadhaarHash: aHash });
@@ -135,7 +137,7 @@ apiRouter.post('/validate-documents', async (req, res) => {
     res.json({ success: true, kycRef, simulatedKycOtp: kycOtp, maskedMobile: '******'+aadhaar.slice(-4), maskedEmail: voterId+'@gov.in' });
 });
 
-apiRouter.post('/verify-kyc-otp', async (req, res) => {
+api.post('/verify-kyc-otp', async (req, res) => {
     const { kycRef, otp } = req.body;
     let record = isSimulated ? db.otps.find(o => o.mobile === kycRef) : await OTP.findOne({ mobile: kycRef });
     if (!record) return res.status(400).json({ error: 'KYC expired.' });
@@ -145,7 +147,7 @@ apiRouter.post('/verify-kyc-otp', async (req, res) => {
     res.json({ success: true, kycToken: token });
 });
 
-apiRouter.post('/vote', async (req, res) => {
+api.post('/vote', async (req, res) => {
     try {
         const { candidateId, selfieData } = req.body;
         const auth = req.headers.authorization;
@@ -165,26 +167,25 @@ apiRouter.post('/vote', async (req, res) => {
     }
 });
 
-apiRouter.post('/wipe', async (req, res) => {
+api.post('/wipe', async (req, res) => {
     if (req.headers['x-admin-key'] !== (process.env.ADMIN_SECRET_KEY || 'admin')) return res.status(403).json({ error: 'No' });
     if (isSimulated) { db = { votes: [], voters: [], otps: [], audit: [] }; }
     else { await Vote.deleteMany({}); await Voter.deleteMany({}); }
     res.json({ success: true });
 });
 
-// Mount the router at both root and /api to ensure it works regardless of Vercel stripping
-app.use('/api', apiRouter);
-app.use('/', apiRouter);
+// Dual mount + strict catch-all
+app.use('/api', api);
+app.use('/', api);
 
-// Fallback for SPA routing (Must be last)
+// Final Safety Fallback
 app.get('*', (req, res) => {
-    // If it's a request for an API that hasn't matched yet, return 404
-    if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API not found' });
+    if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API Endpoint Not Found' });
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 if (!process.env.VERCEL) {
-    app.listen(4000, () => console.log('🛡️  Election Server ready on port 4000'));
+    app.listen(4000, () => console.log('🛡️  Election Server ready'));
 }
 
 module.exports = app;

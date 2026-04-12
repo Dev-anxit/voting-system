@@ -21,7 +21,7 @@
 }
 
 body {
-    background-image: url('assets/voting_bg.png');
+    background-image: url('/assets/voting_bg.png');
     background-size: cover;
     background-position: center right;
     background-repeat: no-repeat;
@@ -42,7 +42,7 @@ body::before {
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(11, 15, 25, 0.7); /* Dark overlay for readability */
+    background: rgba(11, 15, 25, 0.6); /* Slightly lighter overlay */
     z-index: 0;
 }
 
