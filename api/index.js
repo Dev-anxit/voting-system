@@ -42,8 +42,8 @@ app.use(hpp());
 app.use(morgan('dev'));
 
 // Serve Static Frontend
-const projectRoot = path.join(__dirname, '../');
-app.use(express.static(projectRoot));
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
 
 // ==========================================
 // DB ENGINE (With Smart Simulation Fallback)
