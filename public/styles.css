@@ -646,3 +646,109 @@ body {
     padding-bottom: 2rem;
 }
 
+/* ==========================================
+   MODAL APPRECIATION STATE
+   ========================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.appreciation-card {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    max-width: 500px;
+    width: 100%;
+    animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.tricolor-strip {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    display: flex;
+}
+
+.strip-saffron { background: #FF9933; flex: 1; }
+.strip-white { background: #FFFFFF; flex: 1; }
+.strip-green { background: #138808; flex: 1; }
+
+.chakra-container {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.ashoka-chakra-svg {
+    width: 60px;
+    height: 60px;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 128, 0.3));
+    animation: rotateChakra 20s linear infinite;
+}
+
+@keyframes rotateChakra {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.democracy-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    margin: 1.5rem 0;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.law-message {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    border-left: 3px solid var(--accent-primary);
+    text-align: left;
+}
+
+.law-message h4 {
+    color: white;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.law-message p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.pulse-success {
+    animation: pulseGlow 2s ease-in-out infinite;
+    font-size: 1.5rem !important;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { text-shadow: 0 0 8px rgba(16, 185, 129, 0.2); }
+    50% { text-shadow: 0 0 18px rgba(16, 185, 129, 0.5); }
+}

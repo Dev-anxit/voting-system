@@ -51,9 +51,11 @@ app.disable('x-powered-by'); // Security: Don't reveal server type
 
 const allowedOrigins = [
     'http://localhost:4455',
+    'http://localhost:4460',
     'http://localhost:3000',
     'http://localhost:8000',
     'http://127.0.0.1:4455',
+    'http://127.0.0.1:4460',
     'http://127.0.0.1:8000',
     /\.vercel\.app$/ // Allow Vercel deployments
 ];
@@ -181,6 +183,15 @@ api.post('/validate-documents', async (req, res) => {
             return res.status(400).json({ error: 'All document fields (Aadhaar, PAN, Voter ID) are required.' });
         }
 
+        // Strict Format Validation
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        const voterRegex = /^[A-Z]{3}[0-9]{7}$/;
+        const aadhaarRegex = /^\d{12}$/;
+
+        if (!aadhaarRegex.test(aadhaar)) return res.status(400).json({ error: 'Aadhaar must be exactly 12 digits.' });
+        if (!panRegex.test(pan)) return res.status(400).json({ error: 'Invalid PAN format (Expected: 5 Letters, 4 Digits, 1 Letter).' });
+        if (!voterRegex.test(voterId)) return res.status(400).json({ error: 'Invalid Voter ID format (Expected: 3 Letters, 7 Digits).' });
+
         // SECURE: Added salting to hashing to prevent rainbow table attacks/de-anonymization
         const salt = process.env.HASH_SALT || 'development_fallback_salt_2026';
         const aHash = crypto.createHash('sha256').update(aadhaar + salt).digest('hex');
@@ -273,7 +284,8 @@ app.get('*', (req, res) => {
 });
 
 if (!process.env.VERCEL) {
-    app.listen(4000, () => console.log('🛡️  Election Server ready'));
+    const PORT = process.env.PORT || 4005;
+    app.listen(PORT, () => console.log(`🛡️  Election Server ready on port ${PORT}`));
 }
 
 module.exports = app;

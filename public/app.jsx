@@ -8,7 +8,7 @@ const candidates = [
 ];
 
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:4000/api' 
+    ? 'http://localhost:4005/api' 
     : '/api';
 
 // Views: login → login_otp → verification → kyc_otp → selfie → voting → success → results
@@ -40,6 +40,32 @@ function App() {
 
     // Loading state
     const [isLoading, setIsLoading] = useState(false);
+
+    const handlePanChange = (e) => {
+        const val = e.target.value.toUpperCase();
+        let res = '';
+        for (let i = 0; i < val.length && i < 10; i++) {
+            if (i < 5 || i === 9) {
+                if (/[A-Z]/.test(val[i])) res += val[i];
+            } else {
+                if (/[0-9]/.test(val[i])) res += val[i];
+            }
+        }
+        setPan(res);
+    };
+
+    const handleVoterIdChange = (e) => {
+        const val = e.target.value.toUpperCase();
+        let res = '';
+        for (let i = 0; i < val.length && i < 10; i++) {
+            if (i < 3) {
+                if (/[A-Z]/.test(val[i])) res += val[i];
+            } else {
+                if (/[0-9]/.test(val[i])) res += val[i];
+            }
+        }
+        setVoterId(res);
+    };
 
     const generateCaptcha = () => {
         const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -120,6 +146,7 @@ function App() {
             if (res.ok && data.success) {
                 setView('login_otp');
                 showToast(`OTP sent successfully!`, 'success');
+                window.alert('Default OTP is "123456"');
                 console.log("Check server logs for the simulated OTP if testing locally.");
             } else {
                 showToast(data.error || 'Failed to send OTP', 'error');
@@ -200,6 +227,7 @@ function App() {
                 setMaskedMobile(data.maskedMobile);
                 setMaskedEmail(data.maskedEmail);
                 setView('kyc_otp');
+                window.alert('Default OTP is "123456"');
                 console.log("KYC OTP generated. Check server logs.");
             } else {
                 showToast(data.error || 'Document validation failed', 'error');
@@ -544,9 +572,9 @@ function App() {
                                 placeholder="e.g. ABCDE1234F" 
                                 maxLength="10"
                                 value={pan}
-                                onChange={(e) => setPan(e.target.value.toUpperCase())}
+                                onChange={handlePanChange}
                                 className="styled-input"
-                                style={{textTransform: "uppercase"}}
+                                style={{textTransform: "uppercase", letterSpacing: "2px", fontWeight: "600"}}
                                 required
                             />
                             <small style={{color:'var(--text-secondary)', marginTop:'4px', fontSize:'0.75rem'}}>
@@ -560,9 +588,9 @@ function App() {
                                 placeholder="e.g. ABC1234567" 
                                 maxLength="10"
                                 value={voterId}
-                                onChange={(e) => setVoterId(e.target.value.toUpperCase())}
+                                onChange={handleVoterIdChange}
                                 className="styled-input"
-                                style={{textTransform: "uppercase"}}
+                                style={{textTransform: "uppercase", letterSpacing: "2px", fontWeight: "600"}}
                                 required
                             />
                             <small style={{color:'var(--text-secondary)', marginTop:'4px', fontSize:'0.75rem'}}>
@@ -673,8 +701,8 @@ function App() {
             )}
 
             {/* ==================== VIEW: VOTING ==================== */}
-            {view === 'voting' && (
-                <div className="fade-in">
+            {(view === 'voting' || view === 'success') && (
+                <div className="fade-in" style={{ opacity: view === 'success' ? 0.2 : 1, filter: view === 'success' ? 'blur(3px)' : 'none', pointerEvents: view === 'success' ? 'none' : 'auto', transition: 'all 0.6s ease' }}>
                     <div className="auth-banner" style={{background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.2)'}}>
                         <i className="fas fa-user-check"></i> 
                         Verified: AADHAAR ****{aadhaar.substring(8, 12)} | VOTER {voterId} | 📸 Selfie ✓
@@ -705,25 +733,53 @@ function App() {
                 </div>
             )}
 
-            {/* ==================== VIEW: SUCCESS ==================== */}
+            {/* ==================== VIEW: SUCCESS (MODAL OVERLAY) ==================== */}
             {view === 'success' && (
-                <div className="fade-in text-center success-state">
-                    <div className="success-icon-wrapper">
-                        <i className="fas fa-check-circle success-icon-large"></i>
+                <div className="modal-overlay">
+                    <div className="text-center appreciation-card">
+                        <div className="tricolor-strip">
+                            <div className="strip-saffron"></div>
+                            <div className="strip-white"></div>
+                            <div className="strip-green"></div>
+                        </div>
+                        
+                        <div className="chakra-container">
+                            <svg className="ashoka-chakra-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="50" cy="50" r="48" fill="none" stroke="#000080" strokeWidth="1" />
+                                <circle cx="50" cy="50" r="8" fill="none" stroke="#000080" strokeWidth="0.5" />
+                                {[...Array(24)].map((_, i) => (
+                                    <line 
+                                        key={i}
+                                        x1="50" y1="50" 
+                                        x2={50 + 40 * Math.cos(i * (Math.PI / 12))} 
+                                        y2={50 + 40 * Math.sin(i * (Math.PI / 12))} 
+                                        stroke="#000080" strokeWidth="1.2" 
+                                    />
+                                ))}
+                            </svg>
+                        </div>
+
+                        <h2 className="pulse-success" style={{color: "white", marginBottom: '0.5rem', fontWeight: "700"}}>
+                            Vote Recorded Successfully
+                        </h2>
+                        
+                        <p className="democracy-text">
+                            "The right to vote is the foundation of democracy. Your voice ensures the rule of law prevails."
+                        </p>
+
+                        <div className="law-message">
+                            <h4><i className="fas fa-balance-scale"></i> Equality Under Law</h4>
+                            <p>One vote, one value. You have successfully fulfilled your supreme duty.</p>
+                        </div>
+
+                        <div style={{marginTop: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                           Ref: {voterId} | Sec: Encrypted ✓
+                        </div>
+
+                        <button onClick={handleLogout} className="btn btn-primary" style={{marginTop: '1.5rem', background: 'var(--success-color)', py: '0.75rem'}}>
+                            <i className="fas fa-sign-out-alt"></i> Exit Securely
+                        </button>
                     </div>
-                    <h2 className="section-heading" style={{border: 'none', marginBottom: '0.5rem', textAlign:"center"}}>Vote Successfully Recorded!</h2>
-                    <p style={{color: "var(--text-secondary)", marginBottom: "1rem"}}>
-                        Your vote has been securely recorded and cryptographically sealed.
-                    </p>
-                    <div className="success-details">
-                        <p>🪪 Voter ID: <strong>{voterId}</strong></p>
-                        <p>🔐 Aadhaar: ****{aadhaar.substring(8, 12)}</p>
-                        <p>📸 Selfie verification: ✅ Confirmed</p>
-                        <p>🛡️ Triple dedup lock: ✅ Active</p>
-                    </div>
-                    <button onClick={handleLogout} className="btn btn-primary" style={{marginTop: '2rem'}}>
-                        <i className="fas fa-sign-out-alt"></i> Logout & Clear Session
-                    </button>
                 </div>
             )}
 
