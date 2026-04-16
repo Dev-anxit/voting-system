@@ -88,6 +88,9 @@ function App() {
         if (otpHintTimerRef.current) clearTimeout(otpHintTimerRef.current);
         otpHintTimerRef.current = setTimeout(() => setOtpHintVisible(false), 6000);
     };
+
+    const [confirmCandidate, setConfirmCandidate] = useState(null);
+    const [votingBannerPhase, setVotingBannerPhase] = useState(null);
     
     // Security Tokens
     const [jwtToken, setJwtToken] = useState(null);
@@ -366,7 +369,10 @@ function App() {
 
             if (res.ok && data.success) {
                 showToast(`Vote recorded securely!`, 'success');
-                setView('success');
+                setConfirmCandidate(null);
+                setVotingBannerPhase('one_vote');
+                setTimeout(() => setVotingBannerPhase('right_vote'), 2400);
+                setTimeout(() => { setVotingBannerPhase(null); setView('success'); }, 5000);
             } else {
                 showToast(data.error || 'Vote rejected by server.', 'error');
             }
@@ -722,11 +728,7 @@ function App() {
                                 key={c.id} 
                                 className="candidate-card" 
                                 style={{animationDelay: `${idx * 0.1}s`}}
-                                onClick={() => {
-                                    if(confirm(`You are about to vote for ${c.name}.\n\nThis action is IRREVERSIBLE.\nYou will NOT be able to vote again.\n\nProceed?`)) {
-                                        handleVote(c.id, c.name);
-                                    }
-                                }}
+                                onClick={() => setConfirmCandidate(c)}
                             >
                                 <div className="candidate-logo-wrapper">
                                     <img src={c.image} alt={c.name} className="candidate-logo" />
@@ -833,6 +835,93 @@ function App() {
                 <div className={`toast ${toast.type === 'error' ? 'toast-error' : ''}`}>
                     <i className={`fas ${toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}`}></i>
                     <span>{toast.message}</span>
+                </div>
+            )}
+
+            {/* ==================== VOTE CONFIRMATION MODAL ==================== */}
+            {confirmCandidate && (
+                <div className="vote-confirm-overlay" onClick={() => !isLoading && setConfirmCandidate(null)}>
+                    <div className="vote-confirm-modal" onClick={e => e.stopPropagation()}>
+                        <div className="vcm-tricolor"><span className="vct-s"></span><span className="vct-w"></span><span className="vct-g"></span></div>
+                        <div className="vcm-logo-wrap" style={{borderColor: confirmCandidate.color}}>
+                            <img src={confirmCandidate.image} alt={confirmCandidate.name} className="vcm-logo" />
+                        </div>
+                        <p className="vcm-eyebrow">You are voting for</p>
+                        <h3 className="vcm-party">{confirmCandidate.shortName}</h3>
+                        <p className="vcm-full-name">{confirmCandidate.name}</p>
+                        <div className="vcm-warning">
+                            <i className="fas fa-exclamation-triangle"></i>
+                            <span>This action is <strong>irreversible</strong>. You cannot vote again.</span>
+                        </div>
+                        <div className="vcm-actions">
+                            <button className="btn btn-secondary" style={{flex:1}} onClick={() => setConfirmCandidate(null)} disabled={isLoading}>
+                                <i className="fas fa-times"></i> Cancel
+                            </button>
+                            <button className="btn vcm-confirm-btn" style={{flex:1, background:`linear-gradient(135deg, ${confirmCandidate.color}bb, ${confirmCandidate.color})`}}
+                                onClick={() => handleVote(confirmCandidate.id, confirmCandidate.name)} disabled={isLoading}>
+                                {isLoading ? <><i className="fas fa-spinner fa-spin"></i> Recording...</> : <><i className="fas fa-vote-yea"></i> Cast My Vote</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== VOTING SEQUENCE BANNERS ==================== */}
+            {votingBannerPhase && (
+                <div className="voting-banner-overlay">
+                    {votingBannerPhase === 'one_vote' && (
+                        <div className="vb-phase vb-one-vote">
+                            <div className="vb-stripe vb-stripe-saffron"></div>
+                            <div className="vb-stripe vb-stripe-white">
+                                <svg className="vb-mini-chakra" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="#000080" strokeWidth="1"/>
+                                    <circle cx="50" cy="50" r="8" fill="none" stroke="#000080" strokeWidth="0.5"/>
+                                    {[...Array(24)].map((_, i) => (
+                                        <line key={i} x1="50" y1="50"
+                                            x2={50 + 40 * Math.cos(i * (Math.PI / 12))}
+                                            y2={50 + 40 * Math.sin(i * (Math.PI / 12))}
+                                            stroke="#000080" strokeWidth="1.2"/>
+                                    ))}
+                                </svg>
+                            </div>
+                            <div className="vb-stripe vb-stripe-green"></div>
+                            <div className="vb-ov-content">
+                                <div className="vb-checkmark"><i className="fas fa-check"></i></div>
+                                <h1 className="vb-ov-line1">ONE PERSON</h1>
+                                <div className="vb-ov-divider"><span></span><i className="fas fa-dot-circle"></i><span></span></div>
+                                <h1 className="vb-ov-line2">ONE VOTE</h1>
+                                <p className="vb-ov-sub">Your democratic right has been exercised</p>
+                            </div>
+                        </div>
+                    )}
+                    {votingBannerPhase === 'right_vote' && (
+                        <div className="vb-phase vb-right-vote">
+                            <div className="vb-rv-chakra">
+                                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,153,51,0.7)" strokeWidth="1"/>
+                                    <circle cx="50" cy="50" r="8" fill="none" stroke="rgba(255,153,51,0.7)" strokeWidth="0.5"/>
+                                    {[...Array(24)].map((_, i) => (
+                                        <line key={i} x1="50" y1="50"
+                                            x2={50 + 40 * Math.cos(i * (Math.PI / 12))}
+                                            y2={50 + 40 * Math.sin(i * (Math.PI / 12))}
+                                            stroke="rgba(255,153,51,0.7)" strokeWidth="1.2"/>
+                                    ))}
+                                </svg>
+                            </div>
+                            <div className="vb-rv-particles">
+                                {[...Array(12)].map((_, i) => <div key={i} className="vb-particle"></div>)}
+                            </div>
+                            <div className="vb-rv-content">
+                                <h2 className="vb-rv-title">YOUR RIGHT TO VOTE</h2>
+                                <p className="vb-rv-quote">"The ballot is stronger than the bullet."</p>
+                                <p className="vb-rv-attr">— Abraham Lincoln</p>
+                                <div className="vb-rv-jai">जय हिन्द 🇮🇳</div>
+                                <div className="vb-rv-article">
+                                    Article 326 of the Constitution of India guarantees<br/>the right to vote to every citizen aged 18 and above.
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
