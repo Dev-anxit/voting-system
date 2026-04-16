@@ -80,6 +80,14 @@ function App() {
 
     const [toast, setToast] = useState(null);
     const [authenticatedVoter, setAuthenticatedVoter] = useState(null);
+    const [otpHintVisible, setOtpHintVisible] = useState(false);
+    const otpHintTimerRef = useRef(null);
+
+    const showOtpHint = () => {
+        setOtpHintVisible(true);
+        if (otpHintTimerRef.current) clearTimeout(otpHintTimerRef.current);
+        otpHintTimerRef.current = setTimeout(() => setOtpHintVisible(false), 6000);
+    };
     
     // Security Tokens
     const [jwtToken, setJwtToken] = useState(null);
@@ -146,7 +154,7 @@ function App() {
             if (res.ok && data.success) {
                 setView('login_otp');
                 showToast(`OTP sent successfully!`, 'success');
-                window.alert('Default OTP is "123456"');
+                showOtpHint();
                 console.log("Check server logs for the simulated OTP if testing locally.");
             } else {
                 showToast(data.error || 'Failed to send OTP', 'error');
@@ -227,7 +235,7 @@ function App() {
                 setMaskedMobile(data.maskedMobile);
                 setMaskedEmail(data.maskedEmail);
                 setView('kyc_otp');
-                window.alert('Default OTP is "123456"');
+                showOtpHint();
                 console.log("KYC OTP generated. Check server logs.");
             } else {
                 showToast(data.error || 'Document validation failed', 'error');
@@ -825,6 +833,25 @@ function App() {
                 <div className={`toast ${toast.type === 'error' ? 'toast-error' : ''}`}>
                     <i className={`fas ${toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}`}></i>
                     <span>{toast.message}</span>
+                </div>
+            )}
+
+            {/* ==================== OTP HINT POPUP ==================== */}
+            {otpHintVisible && (
+                <div className="otp-hint-overlay" onClick={() => setOtpHintVisible(false)}>
+                    <div className="otp-hint-popup" onClick={e => e.stopPropagation()}>
+                        <div className="otp-hint-icon">
+                            <i className="fas fa-key"></i>
+                        </div>
+                        <div className="otp-hint-body">
+                            <p className="otp-hint-label">Demo Mode — Default OTP</p>
+                            <div className="otp-hint-code">123456</div>
+                            <p className="otp-hint-sub">Use this OTP to proceed in simulation mode</p>
+                        </div>
+                        <button className="otp-hint-close" onClick={() => setOtpHintVisible(false)} aria-label="Close">
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
             )}
         </main>
